@@ -1,72 +1,459 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZANN Interactive Game</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: #ffffff;
-            text-align: center;
-            padding: 20px;
-        }
-        .card {
-            background: #1e1e1e;
-            border-radius: 10px;
-            padding: 20px;
-            max-width: 500px;
-            margin: auto;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        input, button {
-            padding: 10px;
-            margin: 5px;
-            border-radius: 5px;
-            border: none;
-        }
-        input { width: 70%; background: #2a2a2a; color: white; }
-        button { background-color: #22c55e; color: white; cursor: pointer; font-weight: bold; }
-        #connection-status { font-weight: bold; margin-top: 15px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zann Dice - Interactive Edition</title>
+
+  <!-- Firebase Engine (Sync Realtime Antar-HP) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #0d0d11;
+      --card-bg: rgba(22, 22, 30, 0.85);
+      --accent-color: #a855f7;
+      --text-color: #ffffff;
+      --blur-val: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .bg-shape {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 0;
+    }
+    .shape1 { width: 300px; height: 300px; background: rgba(114, 9, 183, 0.3); top: 10%; left: 10%; }
+    .shape2 { width: 350px; height: 350px; background: rgba(247, 37, 133, 0.3); bottom: 10%; right: 10%; }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card-bg);
+      backdrop-filter: blur(var(--blur-val));
+      -webkit-backdrop-filter: blur(var(--blur-val));
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      z-index: 1;
+      text-align: center;
+      position: relative;
+    }
+
+    .sasuke-banner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 15px;
+      background: linear-gradient(90deg, rgba(86,11,173,0.4), rgba(0,0,0,0.6));
+      padding: 10px;
+      border-radius: 15px;
+      border: 1px solid rgba(138, 43, 226, 0.4);
+    }
+
+    .sasuke-avatar {
+      width: 55px;
+      height: 55px;
+      border-radius: 50%;
+      border: 2px solid #a855f7;
+      background: #1e1b4b url('https://i.pinimg.com/736x/89/3e/2a/893e2ae9bbd1a49eb6b5df947c458ef2.jpg') center/cover;
+      box-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
+    }
+
+    .sasuke-info h3 { font-size: 1.1rem; color: #c084fc; letter-spacing: 1px; text-transform: uppercase; text-align: left; }
+    .sasuke-info p { font-size: 0.75rem; color: #aaa; text-align: left; }
+
+    /* RAHASIA ADMIN: Ketuk 3 kali cepat pada tulisan ZANN DICE ini */
+    .header-title {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #ff9d00;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(255, 157, 0, 0.5);
+      margin-bottom: 3px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .subtitle { font-size: 0.85rem; font-weight: 700; color: #aaa; letter-spacing: 1.5px; margin-bottom: 15px; }
+
+    .controls { display: flex; gap: 10px; margin-bottom: 15px; }
+    .control-group { flex: 1; display: flex; flex-direction: column; gap: 5px; text-align: left; }
+    .control-group label { font-size: 0.75rem; font-weight: 700; color: #ccc; text-transform: uppercase; }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      font-weight: bold;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .dice-container {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 20px 0;
+      min-height: 80px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .dice {
+      width: 65px;
+      height: 65px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.3), 0 8px 15px rgba(0,0,0,0.3);
+      transition: transform 0.2s ease;
+    }
+
+    .dice-dot { width: 16px; height: 16px; background-color: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+
+    .verify-code { font-size: 0.85rem; color: #888; margin-bottom: 15px; font-family: monospace; }
+    .verify-code span { color: #fff; font-weight: bold; }
+
+    .roll-btn {
+      width: 100%;
+      padding: 15px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: white;
+      font-size: 1.2rem;
+      font-weight: 900;
+      cursor: pointer;
+      text-transform: uppercase;
+      box-shadow: 0 5px 20px rgba(124, 58, 237, 0.4);
+    }
+
+    .stats-box {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-around;
+      color: #aaa;
+    }
+
+    .overlay-screen {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.92);
+      border-radius: 24px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+    }
+
+    .overlay-text {
+      font-size: 1.6rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #a855f7;
+      animation: pulse 0.5s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { transform: scale(0.95); opacity: 0.7; }
+      to { transform: scale(1.05); opacity: 1; }
+    }
+
+    /* Modal Admin Rahasia */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 10;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+    }
+
+    .modal-content {
+      background: #161622;
+      padding: 20px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 380px;
+      text-align: left;
+      border: 1px solid #333;
+    }
+
+    .modal-content h3 { margin-bottom: 15px; color: #c084fc; }
+    .modal-content label { display: block; margin: 10px 0 5px; font-size: 0.8rem; color: #ccc; }
+    .modal-content input[type="text"], .modal-content input[type="password"] {
+      width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #444; background: #000; color: white;
+    }
+
+    .color-setting-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-actions button { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+  </style>
 </head>
 <body>
 
-    <div class="card">
-        <h1>ZANN Interactive Game</h1>
-        <p>Dashboard Live Gift Otomatis</p>
-        
-        <div>
-            <input type="text" id="tiktok-username" placeholder="Username TikTok (@...)">
-            <button onclick="connectLive()">Connect</button>
-        </div>
+  <div class="bg-shape shape1"></div>
+  <div class="bg-shape shape2"></div>
 
-        <div id="connection-status" style="color: #eab308;">Belum Terhubung</div>
+  <div class="container">
+    <div class="sasuke-banner">
+      <div class="sasuke-avatar"></div>
+      <div class="sasuke-info">
+        <h3>Sasuke Uchiha</h3>
+        <p>⚡ Sharingan Dice Mode Active</p>
+      </div>
     </div>
 
-    <!-- Script Socket.IO -->
-    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
+    <!-- PINTU ADMIN: Ketuk 3x secara cepat di teks 'ZANN DICE' -->
+    <div class="header-title" id="secretTrigger">ZANN DICE</div>
+    <div class="subtitle">ROLL COLORED DICE</div>
 
-    <script>
-        const socket = io("https://3jx41nsx8jy0u.pike.replit.dev");
+    <div class="controls">
+      <div class="control-group">
+        <label>Jumlah Dadu</label>
+        <select id="diceCount">
+          <option value="1">1 DICE</option>
+          <option value="2">2 DICE</option>
+          <option value="3">3 DICE</option>
+          <option value="4" selected>4 DICE</option>
+          <option value="5">5 DICE</option>
+          <option value="6">6 DICE</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Color Dic</label>
+        <select id="colorDic">
+          <option value="RANDOM">RANDOM ALL</option>
+          <option value="RED">RED</option>
+          <option value="ORANGE">ORANGE</option>
+          <option value="YELLOW">YELLOW</option>
+          <option value="GREEN">GREEN</option>
+          <option value="BLUE">BLUE</option>
+          <option value="PURPLE">PURPLE</option>
+        </select>
+      </div>
+    </div>
 
-        function connectLive() {
-            let username = document.getElementById('tiktok-username').value.trim().replace('@', '');
-            if (!username) {
-                alert("Masukkan username TikTok terlebih dahulu!");
-                return;
-            }
+    <div class="dice-container" id="diceContainer"></div>
 
-            socket.emit('set-username', username);
-            document.getElementById('connection-status').innerText = "Menghubungkan ke @" + username + "...";
-            document.getElementById('connection-status').style.color = "#22c55e";
+    <div class="verify-code">ID: <span id="verifyId">#ZANN99SASUKE</span> - Verified</div>
+
+    <button class="roll-btn" onclick="rollDice()">ROLL AGAIN !</button>
+
+    <div class="stats-box">
+      <div>Rolls Today: <b id="rollCount">342</b></div>
+      <div>Users Online: <b id="onlineCount">512</b></div>
+    </div>
+
+    <div class="overlay-screen" id="overlayScreen">
+      <div class="overlay-text" id="overlayText">SHARINGAN ROLLING...</div>
+    </div>
+  </div>
+
+  <!-- Modal Admin Tersembunyi -->
+  <div class="modal" id="adminModal">
+    <div class="modal-content">
+      <h3>Panel Setting Rahasia Admin</h3>
+      <div id="pinSection">
+        <label>Masukkan Password Admin:</label>
+        <input type="password" id="pinInput" placeholder="Password Admin">
+        <div class="modal-actions">
+          <button style="background:#555; color:white;" onclick="closeAdmin()">Batal</button>
+          <button style="background:#7c3aed; color:white;" onclick="verifyPin()">Masuk</button>
+        </div>
+      </div>
+
+      <div id="settingsSection" style="display:none;">
+        <h4 style="color:#c084fc; font-size:0.85rem;">Centang warna yang BOLEH keluar saat di-roll:</h4>
+        <div id="colorConfigList" style="margin-top:10px;"></div>
+        
+        <div class="modal-actions">
+          <button style="background:#555; color:white;" onclick="closeAdmin()">Batal</button>
+          <button style="background:#7c3aed; color:white;" onclick="saveToCloud()">Simpan Settingan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Konfigurasi Database Cloud (Realtime Sync Antar-HP)
+    const firebaseConfig = {
+      apiKey: "AIzaSyZannDiceGlobalDatabase2026Key",
+      authDomain: "zann-dice.firebaseapp.com",
+      databaseURL: "https://zann-dice-default-rtdb.firebaseio.com",
+      projectId: "zann-dice",
+      storageBucket: "zann-dice.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let adminPassword = "Zanndicegg";
+    let rollCounter = 342;
+
+    // Daftar warna rahasia bawaan
+    let allowedColors = [
+      { name: 'Red', hex: '#ff3b30', active: true },
+      { name: 'Orange', hex: '#ff9500', active: true },
+      { name: 'Yellow', hex: '#ffcc00', active: true },
+      { name: 'Green', hex: '#34c759', active: true },
+      { name: 'Blue', hex: '#007aff', active: true },
+      { name: 'Purple', hex: '#af52de', active: true }
+    ];
+
+    const TRANSITION_TEXTS = ["SHARINGAN ROLLING...", "SUSANO'O ROLLING...", "CHIDORI... GO!", "WAIT FOR IT..."];
+
+    // Otomatis Menerima Warna Pilihan Admin Dari Server Cloud Ke Seluruh HP
+    db.ref('diceSettings/allowedColors').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        allowedColors = data;
+        initDiceDisplay();
+      }
+    });
+
+    function getRandomId() {
+      const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      let result = '#';
+      for (let i = 0; i < 10; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    }
+
+    function initDiceDisplay() {
+      const active = allowedColors.filter(c => c.active);
+      const container = document.getElementById('diceContainer');
+      if (container.children.length === 0 && active.length > 0) {
+        for (let i = 0; i < 4; i++) {
+          const col = active[i % active.length];
+          container.innerHTML += `<div class="dice" style="background:${col.hex}"><div class="dice-dot"></div></div>`;
+        }
+      }
+    }
+
+    function rollDice() {
+      const count = parseInt(document.getElementById('diceCount').value);
+      const overlay = document.getElementById('overlayScreen');
+      const overlayText = document.getElementById('overlayText');
+      const active = allowedColors.filter(c => c.active);
+
+      if (active.length === 0) return;
+
+      overlayText.innerText = TRANSITION_TEXTS[Math.floor(Math.random() * TRANSITION_TEXTS.length)];
+      overlay.style.display = 'flex';
+
+      setTimeout(() => {
+        const container = document.getElementById('diceContainer');
+        container.innerHTML = '';
+
+        // Dadu HANYA mengocok dari daftar warna rahasia yang di-centang Admin
+        for (let i = 0; i < count; i++) {
+          const randColor = active[Math.floor(Math.random() * active.length)];
+          container.innerHTML += `<div class="dice" style="background:${randColor.hex}"><div class="dice-dot"></div></div>`;
         }
 
-        socket.on('tiktok-gift', (data) => {
-            console.log("Gift diterima dari:", data.username);
-            alert("Gift masuk dari: " + data.username);
+        document.getElementById('verifyId').innerText = getRandomId();
+        rollCounter++;
+        document.getElementById('rollCount').innerText = rollCounter;
+
+        overlay.style.display = 'none';
+      }, 700);
+    }
+
+    // Cara Buka Admin Rahasia: Ketuk 3x Cepat Pada Tulisan 'ZANN DICE'
+    let taps = 0, timer;
+    document.getElementById('secretTrigger').addEventListener('click', () => {
+      taps++;
+      clearTimeout(timer);
+      if (taps >= 3) {
+        document.getElementById('adminModal').style.display = 'flex';
+        document.getElementById('pinSection').style.display = 'block';
+        document.getElementById('settingsSection').style.display = 'none';
+        taps = 0;
+      } else {
+        timer = setTimeout(() => { taps = 0; }, 500);
+      }
+    });
+
+    function closeAdmin() { document.getElementById('adminModal').style.display = 'none'; }
+
+    function verifyPin() {
+      if (document.getElementById('pinInput').value === adminPassword) {
+        document.getElementById('pinSection').style.display = 'none';
+        document.getElementById('settingsSection').style.display = 'block';
+        renderAdminColors();
+      } else {
+        alert('Password Salah!');
+      }
+    }
+
+    function renderAdminColors() {
+      const container = document.getElementById('colorConfigList');
+      container.innerHTML = '';
+      allowedColors.forEach((c, idx) => {
+        container.innerHTML += `
+          <div class="color-setting-row">
+            <input type="checkbox" id="chk_${idx}" ${c.active ? 'checked' : ''} style="width:20px; height:20px;">
+            <input type="color" value="${c.hex}" id="hex_${idx}" style="width:40px; height:30px;">
+            <input type="text" value="${c.name}" id="name_${idx}">
+          </div>
+        `;
+      });
+    }
+
+    function saveToCloud() {
+      let updated = [];
+      allowedColors.forEach((c, idx) => {
+        updated.push({
+          name: document.getElementById(`name_${idx}`).value,
+          hex: document.getElementById(`hex_${idx}`).value,
+          active: document.getElementById(`chk_${idx}`).checked
         });
-    </script>
+      });
+
+      // Mengirimkan warna baru ke seluruh HP pengguna secara otomatis
+      db.ref('diceSettings/allowedColors').set(updated).then(() => {
+        alert('Settingan Rahasia Tersimpan & Aktif di Semua HP!');
+        closeAdmin();
+      });
+    }
+
+    initDiceDisplay();
+  </script>
 </body>
 </html>
