@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZANN Interactive Game</title>
+</head>
+<body>
+    <!-- Masukkan seluruh struktur tampilan HTML dashboard game Anda di sini -->
+
+    <!-- Script Library Socket.IO -->
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
+
+    <script>
+        // Hubungkan ke Replit Server Anda yang aktif:
+        const socket = io("https://3jx41nsx8jy0u.pike.replit.dev");
+
+        function connectLive() {
+            let username = document.getElementById('tiktok-username').value.trim().replace('@', '');
+            if (!username) return alert("Masukkan username TikTok!");
+            
+            socket.emit('set-username', username);
+            document.getElementById('connection-status').innerText = "Menghubungkan ke @" + username + "...";
+        }
+
+        // Menangkap gift penonton secara otomatis
+        socket.on('tiktok-gift', (data) => {
+            if (typeof addParticipant === 'function') {
+                addParticipant(data.username);
+            }
+        });
+    </script>
+</body>
+</html>
