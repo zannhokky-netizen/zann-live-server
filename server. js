@@ -1,0 +1,33 @@
+
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+app.use(express.json());
+
+let totalEntries = 0;
+
+app.get("/", (req, res) => {
+  res.send("Zann Live Server aktif!");
+});
+
+app.get("/entries", (req, res) => {
+  res.json({ totalEntries });
+});
+
+io.on("connection", (socket) => {
+  socket.emit("entries", { totalEntries });
+});
+
+server.listen(process.env.PORT || 3000, "0.0.0.0", () => {
+  console.log("Zann server berjalan");
+});
