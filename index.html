@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZANN Interactive Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+        }
+        .card {
+            background: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 500px;
+            margin: auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: none;
+        }
+        input { width: 70%; background: #2a2a2a; color: white; }
+        button { background-color: #22c55e; color: white; cursor: pointer; font-weight: bold; }
+        #connection-status { font-weight: bold; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>ZANN Interactive Game</h1>
+        <p>Dashboard Live Gift Otomatis</p>
+        
+        <div>
+            <input type="text" id="tiktok-username" placeholder="Username TikTok (@...)">
+            <button onclick="connectLive()">Connect</button>
+        </div>
+
+        <div id="connection-status" style="color: #eab308;">Belum Terhubung</div>
+    </div>
+
+    <!-- Script Socket.IO -->
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
+
+    <script>
+        const socket = io("https://3jx41nsx8jy0u.pike.replit.dev");
+
+        function connectLive() {
+            let username = document.getElementById('tiktok-username').value.trim().replace('@', '');
+            if (!username) {
+                alert("Masukkan username TikTok terlebih dahulu!");
+                return;
+            }
+
+            socket.emit('set-username', username);
+            document.getElementById('connection-status').innerText = "Menghubungkan ke @" + username + "...";
+            document.getElementById('connection-status').style.color = "#22c55e";
+        }
+
+        socket.on('tiktok-gift', (data) => {
+            console.log("Gift diterima dari:", data.username);
+            alert("Gift masuk dari: " + data.username);
+        });
+    </script>
+</body>
+</html>
